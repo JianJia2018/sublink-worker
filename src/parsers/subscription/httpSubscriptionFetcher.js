@@ -2,25 +2,68 @@ import { decodeBase64 } from '../../utils.js';
 import { parseSubscriptionContent } from './subscriptionContentParser.js';
 
 /**
- * Decode content, trying Base64 first, then URL decoding if needed
+ * Check if a string looks like valid Base64 encoded content.
+ * Base64 only contains [A-Za-z0-9+/] and optional = padding.
+ * @param {string} text - Input text to check
+ * @returns {boolean} - True if text appears to be Base64
+ */
+function looksLikeBase64(text) {
+    const cleaned = text.replace(/\s/g, '');
+    if (cleaned.length === 0) return false;
+    if (!/^[A-Za-z0-9+/]+=*$/.test(cleaned)) return false;
+    if (cleaned.length % 4 !== 0) return false;
+    return true;
+}
+
+/**
+ * Check if a string appears to be valid readable text
+ * (mostly printable characters or common whitespace).
+ * Used to validate Base64 decode results.
+ * @param {string} str - String to check
+ * @returns {boolean} - True if string is mostly readable
+ */
+function isReadableText(str) {
+    const sample = str.slice(0, Math.min(str.length, 2000));
+    if (sample.length === 0) return true;
+    let printable = 0;
+    for (let i = 0; i < sample.length; i++) {
+        const code = sample.charCodeAt(i);
+        if (code >= 32 || code === 9 || code === 10 || code === 13 || code > 127) {
+            printable++;
+        }
+    }
+    return (printable / sample.length) > 0.9;
+}
+
+/**
+ * Decode content, trying Base64 first, then URL decoding if needed.
+ * Includes validation to avoid corrupting plain-text content (e.g. raw Clash YAML).
  * @param {string} text - Raw text content
  * @returns {string} - Decoded content
  */
 function decodeContent(text) {
-    let decodedText;
-    try {
-        decodedText = decodeBase64(text.trim());
-    } catch (e) {
-        decodedText = text;
-        if (decodedText.includes('%')) {
-            try {
-                decodedText = decodeURIComponent(decodedText);
-            } catch (urlError) {
-                console.warn('Failed to URL decode the text:', urlError);
-            }
-        }
+    const trimmed = text.trim();
+
+    if (trimmed.startsWith('{') || trimmed.includes('proxies:') || /\[Proxy\]/i.test(trimmed)) {
+        return trimmed;
     }
-    return decodedText;
+
+    if (looksLikeBase64(trimmed)) {
+        try {
+            const decoded = decodeBase64(trimmed);
+            if (isReadableText(decoded)) {
+                return decoded;
+            }
+        } catch (_) {}
+    }
+
+    if (trimmed.includes('%')) {
+        try {
+            return decodeURIComponent(trimmed);
+        } catch (_) {}
+    }
+
+    return trimmed;
 }
 
 /**
