@@ -1,5 +1,5 @@
 import { ProxyParser } from '../parsers/index.js';
-import { deepCopy, tryDecodeSubscriptionLines, decodeBase64 } from '../utils.js';
+import { deepCopy, tryDecodeSubscriptionLines, decodeBase64, parseCountryFromNodeName } from '../utils.js';
 import { createTranslator } from '../i18n/index.js';
 import { generateRules, getOutbounds, PREDEFINED_RULE_SETS } from '../config/index.js';
 
@@ -98,10 +98,9 @@ export class BaseConfigBuilder {
                                 this.subscriptionUserinfo = subscriptionUserinfo;
                             }
 
-                            // If format is compatible with target client, use as provider
-                            if (this.isCompatibleProviderFormat(format)) {
+                            if (this.isCompatibleProviderFormat(format) && !this.groupByCountry) {
                                 this.providerUrls.push(originalUrl);
-                                continue;  // Skip parsing, will be used as provider
+                                continue;
                             }
 
                             // Otherwise parse the content as usual
@@ -216,7 +215,15 @@ export class BaseConfigBuilder {
         // Store user proxy-groups for later merge (after system groups are created)
         if (Array.isArray(overrides['proxy-groups'])) {
             this.pendingUserProxyGroups = this.pendingUserProxyGroups || [];
-            this.pendingUserProxyGroups.push(...overrides['proxy-groups']);
+            if (this.groupByCountry) {
+                const countryGroups = overrides['proxy-groups'].filter(group => {
+                    const name = (group && group.name) || '';
+                    return parseCountryFromNodeName(name) !== null;
+                });
+                this.pendingUserProxyGroups.push(...countryGroups);
+            } else {
+                this.pendingUserProxyGroups.push(...overrides['proxy-groups']);
+            }
         }
     }
 
