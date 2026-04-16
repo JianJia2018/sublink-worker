@@ -329,8 +329,9 @@ export function createApp(bindings = {}) {
             const originalParam = await shortLinks.resolveShortCode(code);
             if (!originalParam) return c.text('Short URL not found', 404);
 
-            const url = new URL(c.req.url);
-            return c.redirect(`${url.origin}/${prefix}${originalParam}`);
+            return app.request(`/${prefix}${originalParam}`, {
+                headers: c.req.raw.headers,
+            }, c.env, c.executionCtx);
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
