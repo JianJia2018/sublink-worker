@@ -331,7 +331,7 @@ export function createApp(bindings = {}) {
 
             return app.request(`/${prefix}${originalParam}`, {
                 headers: c.req.raw.headers,
-            }, c.env, c.executionCtx);
+            });
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
