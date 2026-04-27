@@ -21,10 +21,12 @@ function resolveKv(env) {
     if (redisAdapter) {
         return redisAdapter;
     }
-    if (env.KV_REST_API_URL && env.KV_REST_API_TOKEN) {
+    const kvUrl = env.KV_REST_API_URL || env.sub_KV_REST_API_URL;
+    const kvToken = env.KV_REST_API_TOKEN || env.sub_KV_REST_API_TOKEN;
+    if (kvUrl && kvToken) {
         return new UpstashKVAdapter({
-            url: env.KV_REST_API_URL,
-            token: env.KV_REST_API_TOKEN
+            url: kvUrl,
+            token: kvToken
         });
     }
     if (env.DISABLE_MEMORY_KV === 'true') {
@@ -51,20 +53,23 @@ function createRedisAdapter(env) {
 function buildRedisConnection(env) {
     const prefix = env.REDIS_KEY_PREFIX || undefined;
     const commonOptions = buildCommonRedisOptions(env);
-    if (env.REDIS_URL) {
+    const redisUrl = env.REDIS_URL || env.sub_REDIS_URL;
+    if (redisUrl) {
         return {
-            url: env.REDIS_URL,
+            url: redisUrl,
             prefix,
             options: commonOptions
         };
     }
-    if (env.REDIS_HOST && env.REDIS_PORT) {
+    const redisHost = env.REDIS_HOST || env.sub_REDIS_HOST;
+    const redisPort = env.REDIS_PORT || env.sub_REDIS_PORT;
+    if (redisHost && redisPort) {
         return {
             prefix,
             options: {
                 ...commonOptions,
-                host: env.REDIS_HOST,
-                port: Number(env.REDIS_PORT)
+                host: redisHost,
+                port: Number(redisPort)
             }
         };
     }
