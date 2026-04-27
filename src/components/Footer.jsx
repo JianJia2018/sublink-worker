@@ -2,8 +2,20 @@
 /** @jsxImportSource hono/jsx */
 import { APP_NAME, GITHUB_REPO, DOCS_URL, APP_VERSION } from '../constants.js';
 
-export const Footer = () => {
+export const Footer = (props) => {
     const currentYear = new Date().getFullYear();
+    const { kvAvailable, kvType } = props;
+    const kvLabel = kvType || (kvAvailable ? 'Memory' : 'None');
+    const kvColor = !kvAvailable
+        ? 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 border-red-200 dark:border-red-800'
+        : kvType === 'Memory'
+            ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
+            : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800';
+    const kvIcon = !kvAvailable
+        ? 'fa-circle-xmark'
+        : kvType === 'Memory'
+            ? 'fa-triangle-exclamation'
+            : 'fa-circle-check';
 
     return (
         <footer class="mt-12 py-8 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
@@ -21,6 +33,18 @@ export const Footer = () => {
                         >
                             v{APP_VERSION}
                         </a>
+                        <span class="hidden md:inline text-gray-300 dark:text-gray-700">|</span>
+                        <span
+                            class={`text-xs px-2 py-0.5 rounded-full border transition-colors font-medium ${kvColor}`}
+                            title={kvAvailable
+                                ? (kvType === 'Memory'
+                                    ? 'KV storage is in-memory — short links will be lost on restart. Configure Upstash Redis or Redis for persistence.'
+                                    : `KV storage: ${kvLabel} — persistent`)
+                                : 'No KV storage configured — short links and config storage are unavailable.'}
+                        >
+                            <i class={`fas ${kvIcon} mr-1`}></i>
+                            KV: {kvAvailable ? kvLabel : 'Not Configured'}
+                        </span>
                     </div>
 
                     <div class="flex items-center gap-6">

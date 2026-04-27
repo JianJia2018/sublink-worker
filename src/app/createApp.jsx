@@ -11,7 +11,7 @@ import { ClashConfigBuilder } from '../builders/ClashConfigBuilder.js';
 import { SurgeConfigBuilder } from '../builders/SurgeConfigBuilder.js';
 import { createTranslator, resolveLanguage } from '../i18n/index.js';
 import { encodeBase64, tryDecodeSubscriptionLines } from '../utils.js';
-import { APP_NAME, APP_SUBTITLE } from '../constants.js';
+import { APP_NAME, APP_SUBTITLE, APP_VERSION } from '../constants.js';
 import { ShortLinkService } from '../services/shortLinkService.js';
 import { ConfigStorageService } from '../services/configStorageService.js';
 import { ServiceError, MissingDependencyError } from '../services/errors.js';
@@ -61,7 +61,7 @@ export function createApp(bindings = {}) {
                             </div>
                         </div>
                     </main>
-                    <Footer />
+                    <Footer kvAvailable={!!runtime.kv} kvType={runtime.kv?.constructor.name.replace('KVAdapter', '').replace('KvAdapter', '') || ''} />
                     <UpdateChecker />
                 </div>
             </Layout>
@@ -385,6 +385,28 @@ export function createApp(bindings = {}) {
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
+    });
+
+    app.get('/api/status', async (c) => {
+        const kv = runtime.kv;
+        const kvType = kv ? kv.constructor.name.replace('KVAdapter', '').replace('KvAdapter', '') : null;
+        let kvHealthy = false;
+        if (kv) {
+            try {
+                await kv.get('__status_check__');
+                kvHealthy = true;
+            } catch {
+                kvHealthy = false;
+            }
+        }
+        return c.json({
+            kvAvailable: !!kv,
+            kvType: kvType || 'none',
+            kvHealthy,
+            shortLinksAvailable: services.shortLinks !== null,
+            configStorageAvailable: services.configStorage !== null,
+            version: APP_VERSION
+        });
     });
 
     app.get('/favicon.ico', async (c) => {
